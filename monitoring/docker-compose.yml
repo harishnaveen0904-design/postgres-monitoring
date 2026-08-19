@@ -89,6 +89,10 @@ services:
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
+      - "--config.expand-env"
+
+    environment:
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
 
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
