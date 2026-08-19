@@ -1,11 +1,11 @@
 global:
   resolve_timeout: 5m
 
-  # SMTP configuration
-  smtp_smarthost: "mail.hexos.in:587"
-  smtp_from: "harishnaveen.intern@subversepay.in"
-  smtp_auth_username: "harishnaveen.intern@subversepay.in"
-  smtp_auth_password: "YOUR_EMAIL_PASSWORD"
+  # Gmail SMTP configuration
+  smtp_smarthost: "smtp.gmail.com:587"
+  smtp_from: "harishnaveen0904@gmail.com"
+  smtp_auth_username: "harishnaveen0904@gmail.com"
+  smtp_auth_password: "${SMTP_PASSWORD}"
   smtp_require_tls: true
 
 route:
@@ -29,5 +29,5 @@ receivers:
   - name: "email-alerts"
 
     email_configs:
-      - to: "harishnaveen.intern@subversepay.in"
+      - to: "harishnaveen0904@gmail.com"
         send_resolved: true
