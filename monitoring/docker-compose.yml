@@ -86,12 +86,13 @@ services:
     container_name: monitoring-alertmanager
     restart: unless-stopped
 
-    # Render the SMTP password from the container environment at startup.
-    # This avoids relying on an unsupported --config.expand-env flag.
+    # Alertmanager does not expand environment variables in YAML.
+    # Render the template at startup and remove spaces from Gmail app passwords.
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
-        sed "s|\$${SMTP_PASSWORD}|$${SMTP_PASSWORD}|g"
+        SMTP_PASSWORD_CLEAN=$(printf '%s' "$${SMTP_PASSWORD}" | tr -d '[:space:]')
+        && sed "s|\$${SMTP_PASSWORD}|$${SMTP_PASSWORD_CLEAN}|g"
         /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
         && exec /bin/alertmanager
         --config.file=/tmp/alertmanager.yml
