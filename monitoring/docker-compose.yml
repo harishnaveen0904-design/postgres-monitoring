@@ -86,16 +86,22 @@ services:
     container_name: monitoring-alertmanager
     restart: unless-stopped
 
+    # Render the SMTP password from the container environment at startup.
+    # This avoids relying on an unsupported --config.expand-env flag.
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--storage.path=/alertmanager"
-
+      - >-
+        sed "s|\$${SMTP_PASSWORD}|$${SMTP_PASSWORD}|g"
+        /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
+        && exec /bin/alertmanager
+        --config.file=/tmp/alertmanager.yml
+        --storage.path=/alertmanager
 
     environment:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
 
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml.template:ro
       - alertmanager_data:/alertmanager
 
     ports:
