@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/rules/alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+scrape_configs:
+
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "prometheus:9090"
+
+  # PostgreSQL metrics
+  - job_name: "postgres"
+    static_configs:
+      - targets:
+          - "postgres-exporter:9187"
+
+  # Docker container CPU / Memory
+  - job_name: "cadvisor"
+    static_configs:
+      - targets:
+          - "cadvisor:8080"
+
+  # Host CPU / Memory / Disk
+  - job_name: "node-exporter"
+    static_configs:
+      - targets:
+          - "node-exporter:9100"

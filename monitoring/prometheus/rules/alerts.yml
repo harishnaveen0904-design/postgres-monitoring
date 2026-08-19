@@ -1,0 +1,115 @@
+groups:
+  - name: monitoring-alerts
+    rules:
+
+      # PostgreSQL container CPU usage > 80%
+      - alert: PostgreSQLHighCPU
+        expr: |
+          100 * (
+            sum by (name) (
+              rate(container_cpu_usage_seconds_total{
+                name="monitoring-postgres"
+              }[5m])
+            )
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL container CPU usage is high"
+          description: "PostgreSQL container CPU usage has been above 80% for 5 minutes."
+
+      # PostgreSQL container memory usage > 80%
+      - alert: PostgreSQLHighMemory
+        expr: |
+          100 * (
+            container_memory_usage_bytes{
+              name="monitoring-postgres"
+            }
+            /
+            container_spec_memory_limit_bytes{
+              name="monitoring-postgres"
+            }
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL container memory usage is high"
+          description: "PostgreSQL container memory usage has been above 80% for 5 minutes."
+
+      # Host CPU usage > 80%
+      - alert: HighSystemCPU
+        expr: |
+          100 - (
+            avg by (instance) (
+              rate(node_cpu_seconds_total{mode="idle"}[5m])
+            ) * 100
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System CPU usage is high"
+          description: "System CPU usage has been above 80% for 5 minutes."
+
+      # Host memory usage > 80%
+      - alert: HighSystemMemory
+        expr: |
+          (
+            1 -
+            (
+              node_memory_MemAvailable_bytes
+              /
+              node_memory_MemTotal_bytes
+            )
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System memory usage is high"
+          description: "System memory usage has been above 80% for 5 minutes."
+
+      # Host disk usage > 90%
+      - alert: HighDiskUsage
+        expr: |
+          (
+            1 -
+            (
+              node_filesystem_avail_bytes{
+                fstype!~"tmpfs|overlay"
+              }
+              /
+              node_filesystem_size_bytes{
+                fstype!~"tmpfs|overlay"
+              }
+            )
+          ) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk usage is critically high"
+          description: "System disk usage has exceeded 90%."
+
+      # PostgreSQL exporter unavailable
+      - alert: PostgreSQLExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL monitoring is down"
+          description: "Prometheus cannot scrape the PostgreSQL exporter."
+
+      # PostgreSQL container unavailable
+      - alert: PostgreSQLContainerDown
+        expr: |
+          absent(container_last_seen{name="monitoring-postgres"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL container is down"
+          description: "The monitoring-postgres container is not being reported by cAdvisor."

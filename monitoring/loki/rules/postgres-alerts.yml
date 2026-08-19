@@ -1,0 +1,19 @@
+groups:
+  - name: postgres-log-alerts
+    rules:
+      - alert: PostgreSQLErrorLog
+        expr: |
+          sum(
+            count_over_time(
+              {container="monitoring-postgres"}
+              |~ "(?i)(ERROR|FATAL|PANIC)"
+              [1m]
+            )
+          ) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL error detected"
+          description: "An ERROR, FATAL, or PANIC message was detected in the PostgreSQL container logs."
