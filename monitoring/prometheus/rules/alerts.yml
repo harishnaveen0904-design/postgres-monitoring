@@ -2,41 +2,48 @@ groups:
   - name: monitoring-alerts
     rules:
 
-      # PostgreSQL container CPU usage > 80%
+      # PostgreSQL container CPU usage > 80% of one CPU core
       - alert: PostgreSQLHighCPU
         expr: |
-          100 * (
-            sum by (name) (
-              rate(container_cpu_usage_seconds_total{
-                name="monitoring-postgres"
-              }[5m])
-            )
+          100 * sum by (name) (
+            rate(container_cpu_usage_seconds_total{
+              name="monitoring-postgres",
+              container="monitoring-postgres"
+            }[5m])
           ) > 80
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "PostgreSQL container CPU usage is high"
-          description: "PostgreSQL container CPU usage has been above 80% for 5 minutes."
+          description: "PostgreSQL container CPU usage has been above 80% of one CPU core for 5 minutes."
 
-      # PostgreSQL container memory usage > 80%
+      # PostgreSQL container memory usage > 80% of its configured limit.
+      # A zero/unset limit is excluded to avoid division-by-zero alerts.
       - alert: PostgreSQLHighMemory
         expr: |
-          100 * (
-            container_memory_usage_bytes{
-              name="monitoring-postgres"
+          (
+            100 * container_memory_working_set_bytes{
+              name="monitoring-postgres",
+              container="monitoring-postgres"
             }
             /
             container_spec_memory_limit_bytes{
-              name="monitoring-postgres"
+              name="monitoring-postgres",
+              container="monitoring-postgres"
             }
           ) > 80
+          and
+          container_spec_memory_limit_bytes{
+            name="monitoring-postgres",
+            container="monitoring-postgres"
+          } > 0
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "PostgreSQL container memory usage is high"
-          description: "PostgreSQL container memory usage has been above 80% for 5 minutes."
+          description: "PostgreSQL container memory usage has been above 80% of its configured memory limit for 5 minutes."
 
       # Host CPU usage > 80%
       - alert: HighSystemCPU
@@ -57,8 +64,7 @@ groups:
       - alert: HighSystemMemory
         expr: |
           (
-            1 -
-            (
+            1 - (
               node_memory_MemAvailable_bytes
               /
               node_memory_MemTotal_bytes
@@ -71,18 +77,19 @@ groups:
           summary: "System memory usage is high"
           description: "System memory usage has been above 80% for 5 minutes."
 
-      # Host disk usage > 90%
+      # Host disk usage > 90%, excluding pseudo filesystems
       - alert: HighDiskUsage
         expr: |
           (
-            1 -
-            (
+            1 - (
               node_filesystem_avail_bytes{
-                fstype!~"tmpfs|overlay"
+                fstype!~"tmpfs|overlay|squashfs",
+                mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"
               }
               /
               node_filesystem_size_bytes{
-                fstype!~"tmpfs|overlay"
+                fstype!~"tmpfs|overlay|squashfs",
+                mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"
               }
             )
           ) * 100 > 90
@@ -91,7 +98,7 @@ groups:
           severity: critical
         annotations:
           summary: "Disk usage is critically high"
-          description: "System disk usage has exceeded 90%."
+          description: "System disk usage has exceeded 90% for 5 minutes."
 
       # PostgreSQL exporter unavailable
       - alert: PostgreSQLExporterDown
