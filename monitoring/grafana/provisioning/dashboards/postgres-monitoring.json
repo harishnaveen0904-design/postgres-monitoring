@@ -1,0 +1,17 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "panels": [
+    {"id":1,"title":"PostgreSQL CPU Usage","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"sum(rate(container_cpu_usage_seconds_total{name=\"monitoring-postgres\"}[5m])) * 100","refId":"A"}],"gridPos":{"h":8,"w":12,"x":0,"y":0}},
+    {"id":2,"title":"PostgreSQL Memory Usage","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"container_memory_usage_bytes{name=\"monitoring-postgres\"}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"bytes"},"overrides":[]},"gridPos":{"h":8,"w":12,"x":12,"y":0}},
+    {"id":3,"title":"Host CPU Usage","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent"},"overrides":[]},"gridPos":{"h":8,"w":12,"x":0,"y":8}},
+    {"id":4,"title":"Host Memory Usage","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent"},"overrides":[]},"gridPos":{"h":8,"w":12,"x":12,"y":8}},
+    {"id":5,"title":"Disk Usage","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"(1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})) * 100","refId":"A"}],"fieldConfig":{"defaults":{"unit":"percent"},"overrides":[]},"gridPos":{"h":8,"w":12,"x":0,"y":16}},
+    {"id":6,"title":"PostgreSQL Active Connections","type":"timeseries","datasource":{"type":"prometheus","uid":""},"targets":[{"expr":"sum(pg_stat_activity_count)","refId":"A"}],"gridPos":{"h":8,"w":12,"x":12,"y":16}},
+    {"id":7,"title":"PostgreSQL Logs","type":"logs","datasource":{"type":"loki","uid":""},"targets":[{"expr":"{container=~\"monitoring-postgres|postgres\"}","refId":"A"}],"gridPos":{"h":10,"w":24,"x":0,"y":24}}
+  ],
+  "schemaVersion": 39,
+  "title": "PostgreSQL Monitoring",
+  "uid": "postgres-monitoring",
+  "version": 1
+}
