@@ -1,52 +1,28 @@
 groups:
   - name: monitoring-alerts
     rules:
-
-      # PostgreSQL CPU alert depends on per-container metrics from cAdvisor.
       - alert: PostgreSQLHighCPU
-        expr: |
-          100 * sum by (name) (
-            rate(container_cpu_usage_seconds_total{
-              name="monitoring-postgres",
-              container="monitoring-postgres"
-            }[5m])
-          ) > 80
-        for: 5m
+        expr: docker_container_cpu_percent{name="monitoring-postgres"} > 80
+        for: 1m
         labels:
           severity: warning
         annotations:
-          summary: "PostgreSQL container CPU usage is high"
-          description: "PostgreSQL container CPU usage has been above 80% of one CPU core for 5 minutes."
+          summary: "PostgreSQL CPU usage is high"
+          description: "The monitoring-postgres container CPU usage has been above 80% for 1 minute."
 
-      # PostgreSQL memory alert depends on per-container metrics from cAdvisor.
       - alert: PostgreSQLHighMemory
         expr: |
-          (
-            100 * container_memory_working_set_bytes{
-              name="monitoring-postgres",
-              container="monitoring-postgres"
-            }
-            /
-            container_spec_memory_limit_bytes{
-              name="monitoring-postgres",
-              container="monitoring-postgres"
-            }
-          ) > 80
-          and
-          container_spec_memory_limit_bytes{
-            name="monitoring-postgres",
-            container="monitoring-postgres"
-          } > 0
+          100 * docker_container_memory_usage_bytes{name="monitoring-postgres"}
+          / docker_container_memory_limit_bytes{name="monitoring-postgres"} > 80
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "PostgreSQL container memory usage is high"
-          description: "PostgreSQL container memory usage has been above 80% of its configured memory limit for 5 minutes."
+          summary: "PostgreSQL memory usage is high"
+          description: "The monitoring-postgres container memory usage has been above 80% of its Docker memory limit for 5 minutes."
 
       - alert: HighSystemCPU
-        expr: |
-          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
         for: 5m
         labels:
           severity: warning
@@ -55,8 +31,7 @@ groups:
           description: "System CPU usage has been above 80% for 5 minutes."
 
       - alert: HighSystemMemory
-        expr: |
-          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
         for: 5m
         labels:
           severity: warning
@@ -78,7 +53,6 @@ groups:
           summary: "Disk usage is critically high"
           description: "System disk usage has exceeded 90% for 5 minutes."
 
-      # Prometheus cannot scrape the PostgreSQL exporter.
       - alert: PostgreSQLExporterDown
         expr: up{job="postgres"} == 0
         for: 2m
@@ -88,8 +62,6 @@ groups:
           summary: "PostgreSQL monitoring exporter is down"
           description: "Prometheus cannot scrape the PostgreSQL exporter."
 
-      # PostgreSQL itself is unreachable. This is more reliable than cAdvisor
-      # container_last_seen on Docker Desktop.
       - alert: PostgreSQLDown
         expr: pg_up == 0
         for: 2m
