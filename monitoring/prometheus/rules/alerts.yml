@@ -2,7 +2,7 @@ groups:
   - name: monitoring-alerts
     rules:
 
-      # PostgreSQL container CPU usage > 80% of one CPU core
+      # PostgreSQL CPU alert depends on per-container metrics from cAdvisor.
       - alert: PostgreSQLHighCPU
         expr: |
           100 * sum by (name) (
@@ -18,8 +18,7 @@ groups:
           summary: "PostgreSQL container CPU usage is high"
           description: "PostgreSQL container CPU usage has been above 80% of one CPU core for 5 minutes."
 
-      # PostgreSQL container memory usage > 80% of its configured limit.
-      # A zero/unset limit is excluded to avoid division-by-zero alerts.
+      # PostgreSQL memory alert depends on per-container metrics from cAdvisor.
       - alert: PostgreSQLHighMemory
         expr: |
           (
@@ -45,14 +44,9 @@ groups:
           summary: "PostgreSQL container memory usage is high"
           description: "PostgreSQL container memory usage has been above 80% of its configured memory limit for 5 minutes."
 
-      # Host CPU usage > 80%
       - alert: HighSystemCPU
         expr: |
-          100 - (
-            avg by (instance) (
-              rate(node_cpu_seconds_total{mode="idle"}[5m])
-            ) * 100
-          ) > 80
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
         for: 5m
         labels:
           severity: warning
@@ -60,16 +54,9 @@ groups:
           summary: "System CPU usage is high"
           description: "System CPU usage has been above 80% for 5 minutes."
 
-      # Host memory usage > 80%
       - alert: HighSystemMemory
         expr: |
-          (
-            1 - (
-              node_memory_MemAvailable_bytes
-              /
-              node_memory_MemTotal_bytes
-            )
-          ) * 100 > 80
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
         for: 5m
         labels:
           severity: warning
@@ -77,22 +64,13 @@ groups:
           summary: "System memory usage is high"
           description: "System memory usage has been above 80% for 5 minutes."
 
-      # Host disk usage > 90%, excluding pseudo filesystems
       - alert: HighDiskUsage
         expr: |
-          (
-            1 - (
-              node_filesystem_avail_bytes{
-                fstype!~"tmpfs|overlay|squashfs",
-                mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"
-              }
-              /
-              node_filesystem_size_bytes{
-                fstype!~"tmpfs|overlay|squashfs",
-                mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"
-              }
-            )
-          ) * 100 > 90
+          (1 - (
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"}
+            /
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"/proc.*|/sys.*|/dev.*|/run.*"}
+          )) * 100 > 90
         for: 5m
         labels:
           severity: critical
@@ -100,23 +78,23 @@ groups:
           summary: "Disk usage is critically high"
           description: "System disk usage has exceeded 90% for 5 minutes."
 
-      # PostgreSQL exporter unavailable
+      # Prometheus cannot scrape the PostgreSQL exporter.
       - alert: PostgreSQLExporterDown
         expr: up{job="postgres"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "PostgreSQL monitoring is down"
+          summary: "PostgreSQL monitoring exporter is down"
           description: "Prometheus cannot scrape the PostgreSQL exporter."
 
-      # PostgreSQL container unavailable
-      - alert: PostgreSQLContainerDown
-        expr: |
-          absent(container_last_seen{name="monitoring-postgres"})
+      # PostgreSQL itself is unreachable. This is more reliable than cAdvisor
+      # container_last_seen on Docker Desktop.
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "PostgreSQL container is down"
-          description: "The monitoring-postgres container is not being reported by cAdvisor."
+          summary: "PostgreSQL database is down"
+          description: "The PostgreSQL exporter cannot connect to the PostgreSQL database."
