@@ -1,0 +1,13 @@
+services:
+  docker-metrics-exporter:
+    build:
+      context: ./docker-metrics-exporter
+    image: monitoring/docker-metrics-exporter:latest
+    container_name: monitoring-docker-metrics-exporter
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "9323:9323"
+    networks:
+      - monitoring
